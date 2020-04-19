@@ -30,19 +30,14 @@ const PlayAgain = props => (
   </div>
 )
 
-const Game = (props) => {
-  const [stars, setStars] = useState(utils.random(1,9));
+const useGameState = () => {
+
+  const [stars, setStars] = useState(utils.random(1,13));
   const [availableNums, setAvailableNums] = useState(utils.range(1,9));
   const [candidateNums, setCandidateNums] = useState([]);
   const [secondsLeft, setSecondsLeft] = useState(10);
 
-  const candidatesAreWrong = utils.sum(candidateNums) > stars;
-  // const gameIsWon = availableNums.length === 0;
-  // const gameIsLost = secondsLeft === 0;
-  const gameStatus = availableNums.length === 0 ? 'won' : secondsLeft === 0 ? 'lost' : 'active';
-
   useEffect(() => {
-    console.log("Component has finished rendering");
     if(secondsLeft>0 && availableNums.length > 0){
       const timerId = setTimeout(()=>{
         setSecondsLeft(secondsLeft - 1);
@@ -50,23 +45,8 @@ const Game = (props) => {
       return () => clearTimeout(timerId);
     }
   });
-
-
-  const resetGame = () => {
-    
-    setStars(utils.random(1,9));
-    setAvailableNums(utils.range(1,9));
-    setCandidateNums([]);
-    setSecondsLeft(10);
-  }
-
-  const onNumberClick = (number, currentStatus) => {
-    if(currentStatus === 'used' || gameStatus!== 'active'){
-      return;
-    }
-
-    const newCandidateNums = currentStatus ==='available' ? candidateNums.concat(number) : candidateNums.filter(cn => cn !== number);
-
+  
+  const setGameState = (newCandidateNums) => {
     if(utils.sum(newCandidateNums) !== stars){
       setCandidateNums(newCandidateNums);
     }else{
@@ -81,6 +61,15 @@ const Game = (props) => {
     }
   }
 
+  return { stars, availableNums, candidateNums, secondsLeft, setGameState}
+}
+
+const Game = (props) => {
+  const { stars, availableNums, candidateNums, secondsLeft, setGameState} = useGameState();
+
+  const candidatesAreWrong = utils.sum(candidateNums) > stars;
+  const gameStatus = availableNums.length === 0 ? 'won' : secondsLeft === 0 ? 'lost' : 'active';
+
   const numberStatus = (number) => {
     if(!availableNums.includes(number)){
       return 'used';
@@ -90,6 +79,18 @@ const Game = (props) => {
     }
     return 'available';
   };
+
+  const onNumberClick = (number, currentStatus) => {
+    if(currentStatus === 'used' || gameStatus!== 'active'){
+      return;
+    }
+
+    const newCandidateNums = currentStatus ==='available' ? candidateNums.concat(number) : candidateNums.filter(cn => cn !== number);
+    setGameState(newCandidateNums);
+
+  }
+
+
 
   return (
     <div className="game">
