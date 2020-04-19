@@ -1,7 +1,96 @@
-import React from 'react';
+import React, {useState, useEffect} from 'react';
 import './App.css';
 
-const StarMatch = () => {
+const StarsDisplay = props => (
+  <>
+    {utils.range(1, props.stars).map(starId => 
+      <div key={starId} className="star" />
+    )}
+  </>
+)
+
+const PlayNumber = props => (
+  <button 
+  className="number" 
+  style={{ backgroundColor: colors[props.status] }}
+  onClick={() => props.onClick(props.number, props.status)}
+  >
+    {props.number}
+  </button>
+)
+
+const PlayAgain = props => (
+  <div className="game-done">
+    <div className="message"
+    style={{ color: props.gameStatus === 'lost' ? 'red':'green'}}
+    >
+      {props.gameStatus === 'lost'?"Game Over":"Nice"}
+    </div>
+    <button onClick={props.onClick}>Play Again</button>
+  </div>
+)
+
+const Game = (props) => {
+  const [stars, setStars] = useState(utils.random(1,9));
+  const [availableNums, setAvailableNums] = useState(utils.range(1,9));
+  const [candidateNums, setCandidateNums] = useState([]);
+  const [secondsLeft, setSecondsLeft] = useState(10);
+
+  const candidatesAreWrong = utils.sum(candidateNums) > stars;
+  // const gameIsWon = availableNums.length === 0;
+  // const gameIsLost = secondsLeft === 0;
+  const gameStatus = availableNums.length === 0 ? 'won' : secondsLeft === 0 ? 'lost' : 'active';
+
+  useEffect(() => {
+    console.log("Component has finished rendering");
+    if(secondsLeft>0 && availableNums.length > 0){
+      const timerId = setTimeout(()=>{
+        setSecondsLeft(secondsLeft - 1);
+      }, 1000);
+      return () => clearTimeout(timerId);
+    }
+  });
+
+
+  const resetGame = () => {
+    
+    setStars(utils.random(1,9));
+    setAvailableNums(utils.range(1,9));
+    setCandidateNums([]);
+    setSecondsLeft(10);
+  }
+
+  const onNumberClick = (number, currentStatus) => {
+    if(currentStatus === 'used' || gameStatus!== 'active'){
+      return;
+    }
+
+    const newCandidateNums = currentStatus ==='available' ? candidateNums.concat(number) : candidateNums.filter(cn => cn !== number);
+
+    if(utils.sum(newCandidateNums) !== stars){
+      setCandidateNums(newCandidateNums);
+    }else{
+      const newAvailableNums = availableNums.filter(
+        n => !newCandidateNums.includes(n)
+      );
+      //redraw stars from what's available
+      setStars(utils.randomSumIn(newAvailableNums,9));
+
+      setAvailableNums(newAvailableNums);
+      setCandidateNums([]);
+    }
+  }
+
+  const numberStatus = (number) => {
+    if(!availableNums.includes(number)){
+      return 'used';
+    }
+    if(candidateNums.includes(number)){
+      return candidatesAreWrong ? 'wrong':'candidate';
+    }
+    return 'available';
+  };
+
   return (
     <div className="game">
       <div className="help">
@@ -9,32 +98,27 @@ const StarMatch = () => {
       </div>
       <div className="body">
         <div className="left">
-          <div className="star" />
-          <div className="star" />
-          <div className="star" />
-          <div className="star" />
-          <div className="star" />
-          <div className="star" />
-          <div className="star" />
-          <div className="star" />
-          <div className="star" />
+          {gameStatus !== 'active' ? (
+            <PlayAgain onClick={props.startNewGame} gameStatus={gameStatus} />
+          ) : (
+            <StarsDisplay stars={stars}/>
+          )}
         </div>
         <div className="right">
-          <button className="number">1</button>
-          <button className="number">2</button>
-          <button className="number">3</button>
-          <button className="number">4</button>
-          <button className="number">5</button>
-          <button className="number">6</button>
-          <button className="number">7</button>
-          <button className="number">8</button>
-          <button className="number">9</button>
+          {utils.range(1, 9).map(number => 
+            <PlayNumber key={number} number={number} status={numberStatus(number)} onClick={onNumberClick}/>
+          )}
         </div>
       </div>
-      <div className="timer">Time Remaining: 10</div>
+          <div className="timer">Time Remaining: {secondsLeft}</div>
     </div>
   );
 };
+
+const StarMatch = () => {
+  const [gameId, setGameId] = useState(1);
+  return <Game key={gameId} startNewGame={() => setGameId(gameId+1)}/>
+}
 
 // Color Theme
 const colors = {
